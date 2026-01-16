@@ -9,10 +9,14 @@ const api = axios.create({
   },
 });
 
-// Add token to requests if available
+// Add token to requests if available (check admin token first, then regular token)
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
+    // Check for admin token first (for admin panel)
+    const adminToken = localStorage.getItem('admin_token');
+    const regularToken = localStorage.getItem('token');
+    const token = adminToken || regularToken;
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -97,6 +101,14 @@ export const kycAPI = {
 export const healthAPI = {
   check: () => api.get('/health'),
   wake: () => api.get('/wake'),
+};
+
+// Admin APIs (separate from regular auth)
+export const adminAPI = {
+  login: (data: { email?: string; username?: string; password: string }) =>
+    api.post('/admin/login', data),
+
+  getMe: () => api.get('/admin/me'),
 };
 
 export default api;
