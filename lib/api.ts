@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://pals-back.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -108,7 +108,19 @@ export const adminAPI = {
   login: (data: { email?: string; username?: string; password: string }) =>
     api.post('/admin/login', data),
 
+  register: (data: { email: string; password: string }) =>
+    api.post('/admin/register', data),
+
   getMe: () => api.get('/admin/me'),
+
+  generateAdmin: (data: {
+    email?: string;
+    username?: string;
+    customPassword?: string;
+  }) => api.post('/admin/generate', data),
+
+  updateKYCStatus: (data: { userId: string; status: 'pending' | 'completed' | 'rejected' }) =>
+    api.put('/admin/kyc/update-status', data),
 };
 
 export default api;

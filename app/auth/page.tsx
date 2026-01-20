@@ -7,10 +7,11 @@ import {
   userAPI,
   kycAPI,
   healthAPI,
+  adminAPI,
 } from '@/lib/api';
 
 export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState<'auth' | 'user' | 'kyc' | 'health'>('auth');
+  const [activeTab, setActiveTab] = useState<'auth' | 'user' | 'kyc' | 'health' | 'admin'>('auth');
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,10 @@ export default function AuthPage() {
     phone: '',
   });
 
+  // Admin form states
+  const [adminLoginData, setAdminLoginData] = useState({ email: '', username: '', password: '' });
+  const [adminRegisterData, setAdminRegisterData] = useState({ email: '', password: '' });
+
   const handleAPI = async (apiCall: () => Promise<any>) => {
     try {
       setLoading(true);
@@ -65,7 +70,12 @@ export default function AuthPage() {
       const res = await apiCall();
       setResponse(res.data);
       if (res.data.data?.token) {
-        localStorage.setItem('token', res.data.data.token);
+        // Check if it's an admin token (from admin login/register)
+        if (res.data.data?.user?.role === 'admin') {
+          localStorage.setItem('admin_token', res.data.data.token);
+        } else {
+          localStorage.setItem('token', res.data.data.token);
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'An error occurred');
@@ -96,7 +106,7 @@ export default function AuthPage() {
           <div className="mb-6">
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
-                {(['auth', 'user', 'kyc', 'health'] as const).map((tab) => (
+                {(['auth', 'user', 'kyc', 'health', 'admin'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => {
@@ -500,6 +510,106 @@ export default function AuthPage() {
                   </div>
                 </div>
               )}
+
+              {activeTab === 'admin' && (
+                <div className="space-y-6">
+                  {/* Admin Register */}
+                  <div className="border-b pb-4">
+                    <h3 className="font-medium mb-3">Admin Register</h3>
+                    <div className="space-y-2">
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={adminRegisterData.email}
+                        onChange={(e) =>
+                          setAdminRegisterData({ ...adminRegisterData, email: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                      />
+                      <input
+                        type="password"
+                        placeholder="Password (min 6 chars)"
+                        value={adminRegisterData.password}
+                        onChange={(e) =>
+                          setAdminRegisterData({ ...adminRegisterData, password: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                      />
+                      <button
+                        onClick={() => handleAPI(() => adminAPI.register(adminRegisterData))}
+                        disabled={loading}
+                        className="w-full bg-blue-600 text-white py-2 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        Register Admin
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Admin Login */}
+                  <div className="border-b pb-4">
+                    <h3 className="font-medium mb-3">Admin Login</h3>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Email or Username"
+                        value={adminLoginData.email || adminLoginData.username}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const isEmail = value.includes('@');
+                          setAdminLoginData({
+                            ...adminLoginData,
+                            email: isEmail ? value : '',
+                            username: !isEmail ? value : '',
+                          });
+                        }}
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                      />
+                      <input
+                        type="password"
+                        placeholder="Password"
+                        value={adminLoginData.password}
+                        onChange={(e) =>
+                          setAdminLoginData({ ...adminLoginData, password: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                      />
+                      <button
+                        onClick={() => handleAPI(() => adminAPI.login(adminLoginData))}
+                        disabled={loading}
+                        className="w-full bg-blue-600 text-white py-2 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        Admin Login
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Get Admin Profile */}
+                  <div className="border-b pb-4">
+                    <h3 className="font-medium mb-3">Get Admin Profile</h3>
+                    <button
+                      onClick={() => handleAPI(() => adminAPI.getMe())}
+                      disabled={loading}
+                      className="w-full bg-blue-600 text-white py-2 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      Get Admin Profile
+                    </button>
+                  </div>
+
+                  {/* Generate Admin */}
+                  <div>
+                    <h3 className="font-medium mb-3">Generate Admin</h3>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Use the Generate Admin page for this feature
+                    </p>
+                    <button
+                      onClick={() => window.location.href = '/admin-generator'}
+                      className="w-full bg-gray-600 text-white py-2 rounded-md text-sm hover:bg-gray-700"
+                    >
+                      Go to Generate Admin
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Response */}
@@ -540,4 +650,5 @@ export default function AuthPage() {
     </div>
   );
 }
+
 

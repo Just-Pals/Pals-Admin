@@ -41,7 +41,7 @@ export default function Dashboard() {
         
         const totalUsers = users.length;
         const verifiedUsers = users.filter((u: any) => u.isVerified).length;
-        const pendingKYC = users.filter((u: any) => u.kycStatus === 'pending').length;
+        const pendingKYC = users.filter((u: any) => u.kycStatus === 'pending' || !u.kycStatus).length;
         const completedKYC = users.filter((u: any) => u.kycStatus === 'completed').length;
 
         setStats({
@@ -162,4 +162,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
 

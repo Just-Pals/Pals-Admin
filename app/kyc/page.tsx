@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
-import { userAPI } from '@/lib/api';
+import { userAPI, adminAPI } from '@/lib/api';
 
 interface User {
   _id: string;
@@ -11,7 +11,7 @@ interface User {
   lastName?: string;
   email?: string;
   phone?: string;
-  kycStatus: string;
+  kycStatus?: string;
   profilePhoto?: string;
   governmentIdType?: string;
   governmentIdFront?: string;
@@ -28,6 +28,7 @@ export default function KYCPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -54,22 +55,23 @@ export default function KYCPage() {
 
   const filteredUsers = users.filter((user) => {
     if (filter === 'all') return true;
-    return user.kycStatus === filter;
+    return (user.kycStatus || 'pending') === filter;
   });
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status?: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
       completed: 'bg-green-100 text-green-800',
       rejected: 'bg-red-100 text-red-800',
     };
+    const displayStatus = status || 'pending';
     return (
       <span
         className={`px-2 py-1 text-xs font-semibold rounded-full ${
-          colors[status] || 'bg-gray-100 text-gray-800'
+          colors[displayStatus] || 'bg-gray-100 text-gray-800'
         }`}
       >
-        {status}
+        {displayStatus}
       </span>
     );
   };
@@ -81,9 +83,31 @@ export default function KYCPage() {
 
   const statusCounts = {
     all: users.length,
-    pending: users.filter((u) => u.kycStatus === 'pending').length,
+    pending: users.filter((u) => (u.kycStatus || 'pending') === 'pending').length,
     completed: users.filter((u) => u.kycStatus === 'completed').length,
     rejected: users.filter((u) => u.kycStatus === 'rejected').length,
+  };
+
+  const handleUpdateKYCStatus = async (userId: string, status: 'completed' | 'rejected') => {
+    if (!confirm(`Are you sure you want to ${status === 'completed' ? 'approve' : 'reject'} this KYC?`)) {
+      return;
+    }
+
+    try {
+      setUpdatingStatus(userId);
+      await adminAPI.updateKYCStatus({ userId, status });
+      // Refresh the users list
+      await fetchUsers();
+      // Update selected user if it's the one being updated
+      if (selectedUser && selectedUser._id === userId) {
+        setSelectedUser({ ...selectedUser, kycStatus: status });
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update KYC status');
+      console.error('Error updating KYC status:', err);
+    } finally {
+      setUpdatingStatus(null);
+    }
   };
 
   return (
@@ -171,6 +195,24 @@ export default function KYCPage() {
                       </div>
                       <div className="flex items-center space-x-4">
                         {getStatusBadge(user.kycStatus)}
+                        {(user.kycStatus === 'pending' || !user.kycStatus) && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateKYCStatus(user._id, 'completed')}
+                              disabled={updatingStatus === user._id}
+                              className="bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 px-3 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updatingStatus === user._id ? 'Updating...' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => handleUpdateKYCStatus(user._id, 'rejected')}
+                              disabled={updatingStatus === user._id}
+                              className="bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-3 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updatingStatus === user._id ? 'Updating...' : 'Reject'}
+                            </button>
+                          </>
+                        )}
                         <button
                           onClick={() => {
                             setSelectedUser(user);
@@ -237,7 +279,7 @@ export default function KYCPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Status</label>
-                  <p className="text-sm text-gray-900">{selectedUser.kycStatus}</p>
+                  <p className="text-sm text-gray-900">{selectedUser.kycStatus || 'pending'}</p>
                 </div>
                 <div className="col-span-2">
                   <label className="text-sm font-medium text-gray-700">Address</label>
@@ -280,10 +322,34 @@ export default function KYCPage() {
                   </div>
                 )}
               </div>
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 flex justify-between">
+                {(selectedUser.kycStatus === 'pending' || !selectedUser.kycStatus) && (
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => {
+                        handleUpdateKYCStatus(selectedUser._id, 'completed');
+                        setShowDetailsModal(false);
+                      }}
+                      disabled={updatingStatus === selectedUser._id}
+                      className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updatingStatus === selectedUser._id ? 'Updating...' : 'Approve KYC'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleUpdateKYCStatus(selectedUser._id, 'rejected');
+                        setShowDetailsModal(false);
+                      }}
+                      disabled={updatingStatus === selectedUser._id}
+                      className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updatingStatus === selectedUser._id ? 'Updating...' : 'Reject KYC'}
+                    </button>
+                  </div>
+                )}
                 <button
                   onClick={() => setShowDetailsModal(false)}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-md text-sm"
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-md text-sm ml-auto"
                 >
                   Close
                 </button>
@@ -295,4 +361,5 @@ export default function KYCPage() {
     </div>
   );
 }
+
 

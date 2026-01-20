@@ -13,7 +13,7 @@ interface User {
   phone?: string;
   role: string;
   isVerified: boolean;
-  kycStatus: string;
+  kycStatus?: string;
   dob?: string;
   address?: string;
   createdAt: string;
@@ -50,19 +50,20 @@ export default function UsersPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status?: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
       completed: 'bg-green-100 text-green-800',
       rejected: 'bg-red-100 text-red-800',
     };
+    const displayStatus = status || 'pending';
     return (
       <span
         className={`px-2 py-1 text-xs font-semibold rounded-full ${
-          colors[status] || 'bg-gray-100 text-gray-800'
+          colors[displayStatus] || 'bg-gray-100 text-gray-800'
         }`}
       >
-        {status}
+        {displayStatus}
       </span>
     );
   };
@@ -205,7 +206,7 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">KYC Status</label>
-                  <p className="text-sm text-gray-900">{selectedUser.kycStatus}</p>
+                  <p className="text-sm text-gray-900">{selectedUser.kycStatus || 'pending'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Date of Birth</label>
@@ -239,4 +240,5 @@ export default function UsersPage() {
     </div>
   );
 }
+
 

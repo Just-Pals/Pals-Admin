@@ -6,31 +6,37 @@ The admin panel now has its own authentication system that is separate from the 
 
 ## Creating Admin User
 
-### Option 1: Using the Script (Recommended)
+### Option 1: Using the Admin Register Form (Recommended)
 
-Run the script to create the default admin user:
+1. Navigate to the admin panel login page
+2. Click on "Register as Admin" link
+3. Fill in your email and password (minimum 6 characters)
+4. Submit the form to create your admin account
+5. You'll be automatically logged in and redirected to the dashboard
+
+### Option 2: Using the Admin Register API
+
+You can register an admin using the API endpoint:
 
 ```bash
-cd Pals-Backend
-npm run create-admin
+POST /api/admin/register
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "yourpassword"
+}
 ```
 
-This will create an admin user with:
-- **Username**: `admin`
-- **Email**: `admin@pals.com`
-- **Password**: `Admin@123`
-- **Role**: `admin`
-
-### Option 2: Manual Creation
+### Option 3: Manual Creation in MongoDB
 
 You can also create an admin user manually in MongoDB:
 
 ```javascript
 // In MongoDB shell or MongoDB Compass
 db.users.insertOne({
-  name: "admin",
-  email: "admin@pals.com",
-  password: "$2a$10$...", // bcrypt hash of "Admin@123"
+  email: "admin@example.com",
+  password: "$2a$10$...", // bcrypt hash of your password
   role: "admin",
   isVerified: true,
   createdAt: new Date(),
@@ -60,10 +66,10 @@ db.users.updateOne(
 ### Request Body
 ```json
 {
-  "email": "admin@pals.com",
+  "email": "admin@example.com",
   // OR
   "username": "admin",
-  "password": "Admin@123"
+  "password": "yourpassword"
 }
 ```
 
@@ -77,7 +83,7 @@ db.users.updateOne(
     "user": {
       "id": "user_id",
       "name": "admin",
-      "email": "admin@pals.com",
+      "email": "admin@example.com",
       "role": "admin"
     }
   }
@@ -94,20 +100,19 @@ db.users.updateOne(
 ## Security Notes
 
 ⚠️ **IMPORTANT**: 
-- Change the default password after first login
-- Use strong passwords in production
+- Use strong passwords in production (minimum 6 characters, but longer is recommended)
 - Admin credentials should never be used in the mobile app
 - The admin login endpoint is separate from regular user login
+- Keep your admin credentials secure and don't share them
 
 ## Using the Admin Panel
 
 1. Navigate to `http://localhost:3000`
 2. You'll be redirected to `/login` if not authenticated
-3. Enter admin credentials:
-   - Username: `admin` (or email: `admin@pals.com`)
-   - Password: `Admin@123`
-4. After login, you'll be redirected to the dashboard
-5. Click "Logout" in the navbar to sign out
+3. If you don't have an account, click "Register as Admin" to create one
+4. Enter your admin credentials (email/username and password)
+5. After login, you'll be redirected to the dashboard
+6. Click "Logout" in the navbar to sign out
 
 ## Troubleshooting
 
@@ -122,4 +127,5 @@ db.users.updateOne(
 ### Token not working
 - Make sure you're using the admin login endpoint (`/api/admin/login`)
 - Regular user tokens won't work for admin routes that require admin role
+
 
