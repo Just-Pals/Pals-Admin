@@ -118,7 +118,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Don't have an admin account?</p>
+          <p>Don&apos;t have an admin account?</p>
           <Link
             href="/admin-register"
             className="mt-2 inline-block text-blue-600 hover:text-blue-700 font-medium"

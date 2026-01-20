@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Navbar from '@/components/Navbar';
 import { userAPI, adminAPI } from '@/lib/api';
 
@@ -168,9 +169,12 @@ export default function KYCPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         {user.profilePhoto ? (
-                          <img
+                          <Image
                             src={user.profilePhoto}
                             alt="Profile"
+                            width={48}
+                            height={48}
+                            unoptimized
                             className="h-12 w-12 rounded-full object-cover"
                           />
                         ) : (
@@ -289,9 +293,12 @@ export default function KYCPage() {
                   <div className="col-span-2">
                     <label className="text-sm font-medium text-gray-700">Profile Photo</label>
                     <div className="mt-2">
-                      <img
+                      <Image
                         src={selectedUser.profilePhoto}
                         alt="Profile"
+                        width={128}
+                        height={128}
+                        unoptimized
                         className="h-32 w-32 rounded-lg object-cover"
                       />
                     </div>
@@ -301,9 +308,12 @@ export default function KYCPage() {
                   <div>
                     <label className="text-sm font-medium text-gray-700">ID Front</label>
                     <div className="mt-2">
-                      <img
+                      <Image
                         src={selectedUser.governmentIdFront}
                         alt="ID Front"
+                        width={400}
+                        height={128}
+                        unoptimized
                         className="h-32 w-full rounded-lg object-cover border"
                       />
                     </div>
@@ -313,9 +323,12 @@ export default function KYCPage() {
                   <div>
                     <label className="text-sm font-medium text-gray-700">ID Back</label>
                     <div className="mt-2">
-                      <img
+                      <Image
                         src={selectedUser.governmentIdBack}
                         alt="ID Back"
+                        width={400}
+                        height={128}
+                        unoptimized
                         className="h-32 w-full rounded-lg object-cover border"
                       />
                     </div>
