@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Navbar from '@/components/Navbar';
+import PageLayout from '@/components/PageLayout';
 import { healthAPI, userAPI } from '@/lib/api';
 
 interface Stats {
@@ -97,9 +97,8 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <PageLayout>
+      <div className="max-w-7xl mx-auto">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
@@ -158,8 +157,8 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 }
 

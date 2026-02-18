@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { adminAPI } from '@/lib/api';
-import { setAdminToken, isAdminAuthenticated } from '@/lib/auth';
+import { authAPI } from '@/lib/api';
+import { setAuthTokens, setUser, isAdminAuthenticated } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,21 +25,22 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Use email if it contains @, otherwise use as username
-      const isEmail = email.includes('@');
-      const response = await adminAPI.login({
-        email: isEmail ? email : undefined,
-        username: !isEmail ? email : undefined,
+      const response = await authAPI.login({
+        login: email,
         password,
       });
 
-      if (response.data.success) {
-        // Store admin token
-        setAdminToken(response.data.data.token);
+      if (response.data.success && response.data.data) {
+        const { accessToken, refreshToken, user } = response.data.data;
+        
+        // Store tokens and user data
+        setAuthTokens(accessToken, refreshToken);
+        setUser(user);
+        
         // Redirect to dashboard
         router.push('/dashboard');
       } else {
-        setError(response.data.message || 'Login failed');
+        setError('Login failed. Please check your credentials.');
       }
     } catch (err: any) {
       setError(
@@ -70,16 +70,16 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email or Username
+              Email
             </label>
             <input
               id="email"
-              type="text"
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter email or username"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
+              placeholder="Enter your email"
             />
           </div>
 
@@ -93,7 +93,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
               placeholder="Enter your password"
             />
           </div>
@@ -116,16 +116,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Don&apos;t have an admin account?</p>
-          <Link
-            href="/admin-register"
-            className="mt-2 inline-block text-blue-600 hover:text-blue-700 font-medium"
-          >
-            Register as Admin
-          </Link>
-        </div>
       </div>
     </div>
   );

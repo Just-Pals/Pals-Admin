@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import AuthGuard from "@/components/AuthGuard";
+import { SidebarProvider } from "@/components/SidebarContext";
 
 export const metadata: Metadata = {
   title: "PALS Admin Panel",
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <AuthGuard>
-          {children}
+          <SidebarProvider>
+            {children}
+          </SidebarProvider>
         </AuthGuard>
       </body>
     </html>

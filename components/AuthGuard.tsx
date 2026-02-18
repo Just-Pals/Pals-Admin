@@ -10,8 +10,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Don't protect login and register pages
-    if (pathname === '/login' || pathname === '/admin-register') {
+    // Don't protect login page
+    if (pathname === '/login') {
       setIsChecking(false);
       return;
     }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import Navbar from '@/components/Navbar';
+import PageLayout from '@/components/PageLayout';
 import { userAPI, adminAPI } from '@/lib/api';
 
 interface User {
@@ -112,9 +112,8 @@ export default function KYCPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <PageLayout>
+      <div className="max-w-7xl mx-auto">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6 flex justify-between items-center">
             <div>
@@ -239,7 +238,7 @@ export default function KYCPage() {
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {showDetailsModal && selectedUser && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -371,7 +370,7 @@ export default function KYCPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }
 

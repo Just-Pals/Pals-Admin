@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://pals-back.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.pals.money/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,16 +9,14 @@ const api = axios.create({
   },
 });
 
-// Add token to requests if available (check admin token first, then regular token)
+// Add token to requests if available
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    // Check for admin token first (for admin panel)
-    const adminToken = localStorage.getItem('admin_token');
-    const regularToken = localStorage.getItem('token');
-    const token = adminToken || regularToken;
+    // Check for access token
+    const accessToken = localStorage.getItem('accessToken');
     
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
   }
   return config;
@@ -26,37 +24,8 @@ api.interceptors.request.use((config) => {
 
 // Auth APIs
 export const authAPI = {
-  signup: (data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    password: string;
-    dob?: string;
-    address?: string;
-  }) => api.post('/auth/signup', data),
-
-  login: (data: { email?: string; phone?: string; password: string }) =>
+  login: (data: { login: string; password: string }) =>
     api.post('/auth/login', data),
-
-  sendOTP: (data: { email?: string; phone?: string }) =>
-    api.post('/auth/send-otp', data),
-
-  verifyOTP: (data: { email?: string; phone?: string; otp: string }) =>
-    api.post('/auth/verify-otp', data),
-
-  forgotPassword: (data: { email?: string; phone?: string }) =>
-    api.post('/auth/forgot-password', data),
-
-  resetPassword: (data: {
-    email?: string;
-    phone?: string;
-    otp: string;
-    newPassword: string;
-  }) => api.post('/auth/reset-password', data),
-
-  getMe: () => api.get('/auth/me'),
-
-  logout: () => api.post('/auth/logout'),
 };
 
 // User APIs
@@ -103,24 +72,44 @@ export const healthAPI = {
   wake: () => api.get('/wake'),
 };
 
-// Admin APIs (separate from regular auth)
+// Admin APIs
 export const adminAPI = {
-  login: (data: { email?: string; username?: string; password: string }) =>
-    api.post('/admin/login', data),
-
-  register: (data: { email: string; password: string }) =>
-    api.post('/admin/register', data),
-
-  getMe: () => api.get('/admin/me'),
-
-  generateAdmin: (data: {
-    email?: string;
-    username?: string;
-    customPassword?: string;
-  }) => api.post('/admin/generate', data),
-
   updateKYCStatus: (data: { userId: string; status: 'pending' | 'completed' | 'rejected' }) =>
     api.put('/admin/kyc/update-status', data),
+};
+
+// Blog APIs
+export const blogAPI = {
+  getAllBlogs: (params?: { page?: number; perPage?: number; status?: 'draft' | 'published' | 'archived' }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.perPage) queryParams.append('perPage', params.perPage.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    const query = queryParams.toString();
+    return api.get(`/blogs${query ? `?${query}` : ''}`);
+  },
+  
+  getBlogById: (id: string) => api.get(`/blogs/${id}`),
+  
+  getBlogBySlug: (slug: string) => api.get(`/blogs/slug/${slug}`),
+  
+  createBlog: (data: {
+    title: string;
+    summary?: string;
+    content: string;
+    status?: 'draft' | 'published' | 'archived';
+    tags?: string[];
+  }) => api.post('/blogs', data),
+  
+  updateBlog: (id: string, data: {
+    title?: string;
+    summary?: string;
+    content?: string;
+    status?: 'draft' | 'published' | 'archived';
+    tags?: string[];
+  }) => api.put(`/blogs/${id}`, data),
+  
+  deleteBlog: (id: string) => api.delete(`/blogs/${id}`),
 };
 
 export default api;

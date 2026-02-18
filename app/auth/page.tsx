@@ -599,14 +599,8 @@ export default function AuthPage() {
                   <div>
                     <h3 className="font-medium mb-3">Generate Admin</h3>
                     <p className="text-xs text-gray-500 mb-2">
-                      Use the Generate Admin page for this feature
+                      This feature has been removed.
                     </p>
-                    <button
-                      onClick={() => window.location.href = '/admin-generator'}
-                      className="w-full bg-gray-600 text-white py-2 rounded-md text-sm hover:bg-gray-700"
-                    >
-                      Go to Generate Admin
-                    </button>
                   </div>
                 </div>
               )}
