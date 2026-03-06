@@ -14,6 +14,7 @@ const menuItems: SidebarItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
   { name: 'Users', href: '/users', icon: '👥' },
   { name: 'KYC', href: '/kyc', icon: '✅' },
+  { name: 'Pools', href: '/pools', icon: '🏊' },
   { name: 'Blog', href: '/blog', icon: '📝' },
 ];
 

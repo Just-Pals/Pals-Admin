@@ -5,7 +5,7 @@ import PageLayout from '@/components/PageLayout';
 import { userAPI } from '@/lib/api';
 
 interface User {
-  _id: string;
+  id: string;
   name?: string;
   firstName?: string;
   lastName?: string;
@@ -13,9 +13,9 @@ interface User {
   phone?: string;
   role: string;
   isVerified: boolean;
-  kycStatus?: string;
-  dob?: string;
-  address?: string;
+  kycStatus?: 'pending' | 'verified' | 'rejected';
+  dateOfBirth?: string | null;
+  address?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,7 +36,7 @@ export default function UsersPage() {
       setLoading(true);
       setError(null);
       const response = await userAPI.getAllUsers();
-      setUsers(response.data.data?.users || []);
+      setUsers(response.data?.data?.users || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch users');
       console.error('Error fetching users:', err);
@@ -53,6 +53,7 @@ export default function UsersPage() {
   const getStatusBadge = (status?: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
+      verified: 'bg-green-100 text-green-800',
       completed: 'bg-green-100 text-green-800',
       rejected: 'bg-red-100 text-red-800',
     };
@@ -100,7 +101,7 @@ export default function UsersPage() {
             <div className="bg-white shadow overflow-hidden sm:rounded-md">
               <ul className="divide-y divide-gray-200">
                 {users.map((user) => (
-                  <li key={user._id} className="px-6 py-4 hover:bg-gray-50">
+                  <li key={user.id} className="px-6 py-4 hover:bg-gray-50">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-3">
@@ -210,7 +211,7 @@ export default function UsersPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-700">Date of Birth</label>
                   <p className="text-sm text-gray-900">
-                    {formatDate(selectedUser.dob)}
+                    {formatDate(selectedUser.dateOfBirth ?? selectedUser.dob)}
                   </p>
                 </div>
                 <div>

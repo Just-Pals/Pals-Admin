@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.pals.money/api';
+const API_BASE_URL = 'http://localhost:3000/api/';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -28,10 +28,10 @@ export const authAPI = {
     api.post('/auth/login', data),
 };
 
-// User APIs
+// User APIs (admin: /users requires admin role)
 export const userAPI = {
-  getProfile: () => api.get('/user/profile'),
-
+  getProfile: () => api.get('/users/profile'),
+  getAllUsers: () => api.get('/users'),
   updateProfile: (data: {
     name?: string;
     email?: string;
@@ -39,15 +39,12 @@ export const userAPI = {
     dob?: string;
     address?: string;
     avatar?: string;
-  }) => api.put('/user/profile', data),
-
+  }) => api.put('/users/profile', data),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
-    api.put('/user/change-password', data),
-
-  getAllUsers: () => api.get('/user/all'),
+    api.put('/users/change-password', data),
 };
 
-// KYC APIs
+// KYC APIs (user-facing)
 export const kycAPI = {
   submitKYC: (data: {
     firstName: string;
@@ -72,10 +69,15 @@ export const healthAPI = {
   wake: () => api.get('/wake'),
 };
 
-// Admin APIs
+// Admin APIs (require admin role)
 export const adminAPI = {
-  updateKYCStatus: (data: { userId: string; status: 'pending' | 'completed' | 'rejected' }) =>
-    api.put('/admin/kyc/update-status', data),
+  getStats: () => api.get('/admin/stats'),
+  getAllPools: () => api.get('/admin/pools'),
+  updateKYCStatus: (data: {
+    userId: string;
+    status: 'pending' | 'verified' | 'rejected';
+    rejectionReason?: string | null;
+  }) => api.put('/admin/kyc/update-status', data),
 };
 
 // Blog APIs
