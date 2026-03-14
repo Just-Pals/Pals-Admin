@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import PageLayout from '@/components/PageLayout';
-import { blogAPI } from '@/lib/api';
+import { blogAPI, mediaAPI, API_ORIGIN } from '@/lib/api';
 
 interface Blog {
   id: string;
@@ -10,6 +10,8 @@ interface Blog {
   slug: string;
   summary?: string;
   content?: string;
+  coverMediaId?: string | null;
+  coverImageUrl?: string | null;
   status: 'draft' | 'published' | 'archived';
   tags?: string[];
   createdAt: string;
@@ -38,7 +40,12 @@ export default function BlogPage() {
     summary: '',
     content: '',
     tags: '',
+    coverMediaId: null as string | null,
+    coverImageUrl: null as string | null,
   });
+  const [coverUploading, setCoverUploading] = useState(false);
+  /** Fallback to redirect URL if direct image URL fails to load */
+  const [coverImageError, setCoverImageError] = useState(false);
 
   useEffect(() => {
     fetchBlogs();
@@ -70,25 +77,87 @@ export default function BlogPage() {
 
   const handleCreate = () => {
     setEditingBlog(null);
+    setCoverImageError(false);
     setFormData({
       title: '',
       summary: '',
       content: '',
       tags: '',
+      coverMediaId: null,
+      coverImageUrl: null,
     });
     setShowModal(true);
   };
 
-  const handleEdit = (blog: Blog) => {
+  const handleEdit = async (blog: Blog) => {
     setEditingBlog(blog);
+    setCoverImageError(false);
+    let coverImageUrl: string | null = blog.coverImageUrl ?? null;
+    if (!coverImageUrl && blog.coverMediaId) {
+      try {
+        const res = await mediaAPI.getMediaById(blog.coverMediaId);
+        if (res.data?.success && res.data?.data?.publicUrl) {
+          coverImageUrl = res.data.data.publicUrl;
+        }
+      } catch {
+        // Ignore - cover may not exist
+      }
+    }
     setFormData({
       title: blog.title,
       summary: blog.summary || '',
       content: blog.content || '',
       tags: blog.tags?.join(', ') || '',
+      coverMediaId: blog.coverMediaId || null,
+      coverImageUrl,
     });
     setShowModal(true);
   };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      alert('Please select an image file (JPEG, PNG, GIF, WebP)');
+      return;
+    }
+    try {
+      setCoverUploading(true);
+      setCoverImageError(false);
+      const res = await mediaAPI.uploadMedia(file, 'blog_cover');
+      if (res.data?.success && res.data?.data?.media) {
+        const { id, publicUrl } = res.data.data.media;
+        setFormData((prev) => ({
+          ...prev,
+          coverMediaId: id,
+          coverImageUrl: publicUrl || null,
+        }));
+      } else {
+        alert('Upload failed');
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to upload image');
+    } finally {
+      setCoverUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setCoverImageError(false);
+    setFormData((prev) => ({
+      ...prev,
+      coverMediaId: null,
+      coverImageUrl: null,
+    }));
+  };
+
+  /** Preview URL: use direct URL if available and not failed; else use API redirect so image always loads */
+  const coverPreviewUrl =
+    formData.coverImageUrl && !coverImageError
+      ? formData.coverImageUrl
+      : formData.coverMediaId
+        ? `${API_ORIGIN}/api/media/public/${formData.coverMediaId}`
+        : null;
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this blog post?')) {
@@ -116,6 +185,7 @@ export default function BlogPage() {
         title: formData.title,
         summary: formData.summary || undefined,
         content: formData.content,
+        coverMediaId: formData.coverMediaId || undefined,
         status: 'published' as const,
         tags: tagsArray.length > 0 ? tagsArray : undefined,
       };
@@ -184,7 +254,16 @@ export default function BlogPage() {
                   <ul className="divide-y divide-gray-200">
                     {blogs.map((blog) => (
                       <li key={blog.id} className="px-6 py-4 hover:bg-gray-50">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-4">
+                          {blog.coverImageUrl && (
+                            <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+                              <img
+                                src={blog.coverImageUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-3">
                               <div className="flex-1">
@@ -304,6 +383,18 @@ export default function BlogPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Slug
+                  </label>
+                  <p className="text-sm text-gray-500 py-1.5">
+                    {editingBlog ? (
+                      <code className="bg-gray-100 px-2 py-0.5 rounded">{editingBlog.slug}</code>
+                    ) : (
+                      'Auto-generated from title when you save.'
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Summary
                   </label>
                   <input
@@ -313,6 +404,46 @@ export default function BlogPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400"
                     placeholder="Enter blog summary"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cover Image
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    JPEG, PNG, GIF or WebP. Recommended aspect ratio 16:9 or 2:1 for best display on the blog.
+                  </p>
+                  <div className="space-y-2">
+                    {coverPreviewUrl ? (
+                      <div className="relative inline-block w-full">
+                        <img
+                          src={coverPreviewUrl}
+                          alt="Cover preview"
+                          className="max-h-56 w-full rounded-md border border-gray-200 object-cover object-center bg-gray-100"
+                          onError={() => setCoverImageError(true)}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveCover}
+                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded shadow"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-colors">
+                        <span className="text-sm text-gray-500">
+                          {coverUploading ? 'Uploading...' : 'Click to upload cover image'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          onChange={handleCoverUpload}
+                          disabled={coverUploading}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
