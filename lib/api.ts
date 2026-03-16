@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000/api/';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.pals.money/api/';
+/** Base origin for building media URLs (e.g. preview via /api/media/public/:id) */
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,12 +14,14 @@ const api = axios.create({
 // Add token to requests if available
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    // Check for access token
     const accessToken = localStorage.getItem('accessToken');
-    
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+  }
+  // For FormData uploads, let browser set Content-Type with boundary
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
   }
   return config;
 });
@@ -80,6 +84,19 @@ export const adminAPI = {
   }) => api.put('/admin/kyc/update-status', data),
 };
 
+// Media APIs (upload, get by ID)
+export const mediaAPI = {
+  uploadMedia: (file: File, type: string, entityType?: string, entityId?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+    if (entityType) formData.append('entityType', entityType);
+    if (entityId) formData.append('entityId', entityId);
+    return api.post('/media/upload', formData);
+  },
+  getMediaById: (id: string) => api.get(`/media/${id}`),
+};
+
 // Blog APIs
 export const blogAPI = {
   getAllBlogs: (params?: { page?: number; perPage?: number; status?: 'draft' | 'published' | 'archived' }) => {
@@ -99,6 +116,7 @@ export const blogAPI = {
     title: string;
     summary?: string;
     content: string;
+    coverMediaId?: string | null;
     status?: 'draft' | 'published' | 'archived';
     tags?: string[];
   }) => api.post('/blogs', data),
@@ -107,6 +125,7 @@ export const blogAPI = {
     title?: string;
     summary?: string;
     content?: string;
+    coverMediaId?: string | null;
     status?: 'draft' | 'published' | 'archived';
     tags?: string[];
   }) => api.put(`/blogs/${id}`, data),
