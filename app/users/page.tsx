@@ -211,7 +211,7 @@ export default function UsersPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-700">Date of Birth</label>
                   <p className="text-sm text-gray-900">
-                    {formatDate(selectedUser.dateOfBirth ?? selectedUser.dob)}
+                    {formatDate(selectedUser.dateOfBirth ?? undefined)}
                   </p>
                 </div>
                 <div>
