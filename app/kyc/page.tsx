@@ -90,7 +90,7 @@ export default function KYCPage() {
   };
 
   const handleUpdateKYCStatus = async (userId: string, status: 'verified' | 'rejected') => {
-    if (!confirm(`Are you sure you want to ${status === 'completed' ? 'approve' : 'reject'} this KYC?`)) {
+    if (!confirm(`Are you sure you want to ${status === 'verified' ? 'approve' : 'reject'} this KYC?`)) {
       return;
     }
 
@@ -212,7 +212,7 @@ export default function KYCPage() {
                               disabled={updatingStatus === user.id}
                               className="bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-3 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {updatingStatus === user._id ? 'Updating...' : 'Reject'}
+                              {updatingStatus === user.id ? 'Updating...' : 'Reject'}
                             </button>
                           </>
                         )}
@@ -272,7 +272,7 @@ export default function KYCPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-                  <p className="text-sm text-gray-900">{formatDate(selectedUser.dateOfBirth)}</p>
+                  <p className="text-sm text-gray-900">{formatDate(selectedUser.dateOfBirth ?? undefined)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">ID Type</label>
