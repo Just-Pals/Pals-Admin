@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"401\\\\|Unauthorized\\\\|interceptors.response\\\\|catch\" c:/Users/mahma/Desktop/PALS/Admin/Pals-Admin --include=*.ts --include=*.tsx)"
+    ]
+  }
+}
