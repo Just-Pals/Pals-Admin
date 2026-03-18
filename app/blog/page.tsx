@@ -255,12 +255,13 @@ export default function BlogPage() {
                     {blogs.map((blog) => (
                       <li key={blog.id} className="px-6 py-4 hover:bg-gray-50">
                         <div className="flex items-center justify-between gap-4">
-                          {blog.coverImageUrl && (
+                          {blog.coverMediaId && (
                             <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
                               <img
-                                src={blog.coverImageUrl}
+                                src={`${API_ORIGIN}/api/media/public/${blog.coverMediaId}`}
                                 alt=""
                                 className="w-full h-full object-cover"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               />
                             </div>
                           )}
