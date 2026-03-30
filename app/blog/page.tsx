@@ -251,10 +251,17 @@ export default function BlogPage() {
                           {blog.coverMediaId && (
                             <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
                               <img
-                                src={`${API_ORIGIN}/api/media/public/${blog.coverMediaId}`}
+                                src={blog.coverImageUrl || `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`}
                                 alt=""
                                 className="w-full h-full object-cover"
-                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                onError={(e) => {
+                                  const img = e.currentTarget;
+                                  if (blog.coverImageUrl && img.src !== `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`) {
+                                    img.src = `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`;
+                                  } else {
+                                    img.style.display = 'none';
+                                  }
+                                }}
                               />
                             </div>
                           )}
