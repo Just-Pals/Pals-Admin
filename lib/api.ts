@@ -131,15 +131,17 @@ export const blogAPI = {
     summary?: string;
     content: string;
     coverMediaId?: string | null;
+    coverImageUrl?: string | null;
     status?: 'draft' | 'published' | 'archived';
     tags?: string[];
   }) => api.post('/blogs', data),
-  
+
   updateBlog: (id: string, data: {
     title?: string;
     summary?: string;
     content?: string;
     coverMediaId?: string | null;
+    coverImageUrl?: string | null;
     status?: 'draft' | 'published' | 'archived';
     tags?: string[];
   }) => api.put(`/blogs/${id}`, data),

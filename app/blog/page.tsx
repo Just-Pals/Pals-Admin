@@ -58,7 +58,6 @@ export default function BlogPage() {
       const response = await blogAPI.getAllBlogs({
         page: currentPage,
         perPage: 10,
-        status: 'published',
       });
       
       if (response.data.success) {
@@ -89,20 +88,13 @@ export default function BlogPage() {
     setShowModal(true);
   };
 
-  const handleEdit = async (blog: Blog) => {
+  const handleEdit = (blog: Blog) => {
     setEditingBlog(blog);
     setCoverImageError(false);
-    let coverImageUrl: string | null = blog.coverImageUrl ?? null;
-    if (!coverImageUrl && blog.coverMediaId) {
-      try {
-        const res = await mediaAPI.getMediaById(blog.coverMediaId);
-        if (res.data?.success && res.data?.data?.publicUrl) {
-          coverImageUrl = res.data.data.publicUrl;
-        }
-      } catch {
-        // Ignore - cover may not exist
-      }
-    }
+    // coverImageUrl is not persisted by the backend — resolve via coverMediaId instead
+    const coverImageUrl = blog.coverMediaId
+      ? `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`
+      : null;
     setFormData({
       title: blog.title,
       summary: blog.summary || '',
@@ -125,11 +117,11 @@ export default function BlogPage() {
       setCoverImageError(false);
       const res = await mediaAPI.uploadMedia(file, 'blog_cover');
       if (res.data?.success && res.data?.data?.media) {
-        const { id, publicUrl } = res.data.data.media;
+        const { id, signedUrl, publicUrl } = res.data.data.media;
         setFormData((prev) => ({
           ...prev,
           coverMediaId: id,
-          coverImageUrl: publicUrl || null,
+          coverImageUrl: signedUrl || publicUrl || null,
         }));
       } else {
         alert('Upload failed');
@@ -186,6 +178,7 @@ export default function BlogPage() {
         summary: formData.summary || undefined,
         content: formData.content,
         coverMediaId: formData.coverMediaId || undefined,
+        // Don't send coverImageUrl — backend doesn't persist it and signed URLs expire
         status: 'published' as const,
         tags: tagsArray.length > 0 ? tagsArray : undefined,
       };
@@ -268,9 +261,18 @@ export default function BlogPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-3">
                               <div className="flex-1">
-                                <h3 className="text-lg font-medium text-gray-900">
-                                  {blog.title}
-                                </h3>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-lg font-medium text-gray-900">
+                                    {blog.title}
+                                  </h3>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    blog.status === 'published' ? 'bg-green-100 text-green-800' :
+                                    blog.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {blog.status}
+                                  </span>
+                                </div>
                                 {blog.summary && (
                                   <p className="text-sm text-gray-500 mt-1">
                                     {blog.summary}
