@@ -143,13 +143,12 @@ export default function BlogPage() {
     }));
   };
 
-  /** Preview URL: use direct URL if available and not failed; else use API redirect so image always loads */
-  const coverPreviewUrl =
-    formData.coverImageUrl && !coverImageError
-      ? formData.coverImageUrl
-      : formData.coverMediaId
-        ? `${API_ORIGIN}/api/media/public/${formData.coverMediaId}`
-        : null;
+  // Always prefer the stable public media URL when we have a coverMediaId.
+  // Using coverImageUrl (signed, expiring) as primary caused edit-mode broken images
+  // because the fallback was the same URL, so React never re-fetched.
+  const coverPreviewUrl = formData.coverMediaId
+    ? `${API_ORIGIN}/api/media/public/${formData.coverMediaId}`
+    : formData.coverImageUrl || null;
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this blog post?')) {
@@ -210,155 +209,153 @@ export default function BlogPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-7xl mx-auto">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="mb-6 flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Blog Management</h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Create, edit, and manage blog posts
-              </p>
-            </div>
-            <button
-              onClick={handleCreate}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm"
-            >
-              + Create New Post
-            </button>
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Blog</h1>
+            <p className="mt-1 text-sm text-gray-500">{blogs.length} post{blogs.length !== 1 ? 's' : ''}</p>
           </div>
+          <button
+            onClick={handleCreate}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg text-sm transition-colors"
+          >
+            + New Post
+          </button>
+        </div>
 
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-              <p className="mt-4 text-gray-600">Loading blogs...</p>
-            </div>
-          ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <p className="text-red-800">{error}</p>
-            </div>
-          ) : (
-            <>
-              <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                {blogs.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">No blog posts found. Create your first post!</p>
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-gray-200">
-                    {blogs.map((blog) => (
-                      <li key={blog.id} className="px-6 py-4 hover:bg-gray-50">
-                        <div className="flex items-center justify-between gap-4">
-                          {blog.coverMediaId && (
-                            <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-                              <img
-                                src={blog.coverImageUrl || `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`}
-                                alt=""
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const img = e.currentTarget;
-                                  if (blog.coverImageUrl && img.src !== `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`) {
-                                    img.src = `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`;
-                                  } else {
-                                    img.style.display = 'none';
-                                  }
-                                }}
-                              />
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-sm">Loading posts...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">{error}</div>
+        ) : blogs.length === 0 ? (
+          <div className="text-center py-24 text-gray-400">
+            <p className="text-base font-medium">No posts yet</p>
+            <p className="text-sm mt-1">Create your first blog post to get started.</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4">
+              {blogs.map((blog) => (
+                <div key={blog.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="flex gap-0">
+                    {/* Cover image */}
+                    {blog.coverMediaId && (
+                      <div className="flex-shrink-0 w-40 bg-gray-100">
+                        <img
+                          src={blog.coverImageUrl || `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const img = e.currentTarget;
+                            if (blog.coverImageUrl && img.src !== `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`) {
+                              img.src = `${API_ORIGIN}/api/media/public/${blog.coverMediaId}`;
+                            } else {
+                              img.style.display = 'none';
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
+                      <div>
+                        {/* Title + status */}
+                        <div className="flex items-start gap-3 mb-2">
+                          <h3 className="text-base font-semibold text-gray-900 leading-snug flex-1">
+                            {blog.title}
+                          </h3>
+                          <span className={`flex-shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            blog.status === 'published' ? 'bg-green-100 text-green-700' :
+                            blog.status === 'draft' ? 'bg-amber-100 text-amber-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            {blog.status}
+                          </span>
+                        </div>
+
+                        {/* Summary / excerpt */}
+                        {(blog.summary || blog.content) && (
+                          <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
+                            {blog.summary || blog.content!.replace(/<[^>]*>/g, '').substring(0, 160)}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Footer: meta + actions */}
+                      <div className="mt-4 flex items-end justify-between gap-4">
+                        <div className="flex flex-col gap-1.5 min-w-0">
+                          {/* Date + slug */}
+                          <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+                            <span>{formatDate(blog.createdAt)}</span>
+                            <span className="font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded truncate max-w-xs">
+                              /{blog.slug}
+                            </span>
+                          </div>
+                          {/* Tags */}
+                          {blog.tags && blog.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {blog.tags.map((tag, idx) => (
+                                <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full">
+                                  {tag}
+                                </span>
+                              ))}
                             </div>
                           )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="text-lg font-medium text-gray-900">
-                                    {blog.title}
-                                  </h3>
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    blog.status === 'published' ? 'bg-green-100 text-green-800' :
-                                    blog.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    {blog.status}
-                                  </span>
-                                </div>
-                                {blog.summary && (
-                                  <p className="text-sm text-gray-500 mt-1">
-                                    {blog.summary}
-                                  </p>
-                                )}
-                                {blog.content && (
-                                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                                    {blog.content.replace(/<[^>]*>/g, '').substring(0, 150)}
-                                    {blog.content.length > 150 ? '...' : ''}
-                                  </p>
-                                )}
-                                <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
-                                  <span>Slug: {blog.slug}</span>
-                                  <span>Created: {formatDate(blog.createdAt)}</span>
-                                  {blog.tags && blog.tags.length > 0 && (
-                                    <div className="flex items-center space-x-1">
-                                      <span>Tags:</span>
-                                      {blog.tags.map((tag, idx) => (
-                                        <span
-                                          key={idx}
-                                          className="px-2 py-0.5 bg-gray-100 rounded"
-                                        >
-                                          {tag}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2 ml-4">
-                            <button
-                              onClick={() => handleEdit(blog)}
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 rounded hover:bg-blue-50"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(blog.id)}
-                              className="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 rounded hover:bg-red-50"
-                            >
-                              Delete
-                            </button>
-                          </div>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
 
-              {/* Pagination */}
-              {pagination && pagination.totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-700">
-                    Showing page {pagination.page} of {pagination.totalPages} ({pagination.totalItems} total)
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={!pagination.hasPrevPage}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage((p) => p + 1)}
-                      disabled={!pagination.hasNextPage}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Next
-                    </button>
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => handleEdit(blog)}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(blog.id)}
+                            className="text-sm font-medium text-red-500 hover:text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-            </>
-          )}
-        </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-sm text-gray-500">
+                  Page {pagination.page} of {pagination.totalPages} &middot; {pagination.totalItems} posts
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={!pagination.hasPrevPage}
+                    className="px-4 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    disabled={!pagination.hasNextPage}
+                    className="px-4 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Create/Edit Modal */}
@@ -424,13 +421,19 @@ export default function BlogPage() {
                   </p>
                   <div className="space-y-2">
                     {coverPreviewUrl ? (
-                      <div className="relative inline-block w-full">
-                        <img
-                          src={coverPreviewUrl}
-                          alt="Cover preview"
-                          className="max-h-56 w-full rounded-md border border-gray-200 object-cover object-center bg-gray-100"
-                          onError={() => setCoverImageError(true)}
-                        />
+                      <div className="relative w-full">
+                        {coverImageError ? (
+                          <div className="flex items-center justify-center w-full h-36 rounded-md border border-gray-200 bg-gray-50 text-gray-400 text-sm">
+                            Image unavailable
+                          </div>
+                        ) : (
+                          <img
+                            src={coverPreviewUrl}
+                            alt="Cover preview"
+                            className="max-h-56 w-full rounded-md border border-gray-200 object-cover object-center bg-gray-100"
+                            onError={() => setCoverImageError(true)}
+                          />
+                        )}
                         <button
                           type="button"
                           onClick={handleRemoveCover}
