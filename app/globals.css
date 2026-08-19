@@ -3,21 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0a0a0a;
+  --foreground: #ffffff;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Inter, "Helvetica Neue", Arial, sans-serif;
 }
 
 @layer utilities {
@@ -26,7 +19,7 @@ body {
   }
 }
 
-/* Ensure form fields have visible text color */
+/* Ensure form fields have visible text color against dark fills */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -35,12 +28,19 @@ input[type="tel"],
 input[type="url"],
 textarea,
 select {
-  color: #111827 !important; /* text-gray-900 */
+  color: #ffffff !important;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #9ca3af !important; /* text-gray-400 */
+  color: rgba(255, 255, 255, 0.4) !important;
 }
 
-
+/* Chrome/Edge autofill forces a light background by default; keep it dark */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #1c1c1e inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}

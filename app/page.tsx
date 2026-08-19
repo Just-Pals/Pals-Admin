@@ -17,35 +17,35 @@ export default function Home() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <nav className="bg-surface shadow-sm border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">PALS Admin Panel</h1>
+              <h1 className="text-2xl font-bold text-gold">PALS Admin Panel</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Link
                 href="/dashboard"
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-white/70 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
               >
                 Dashboard
               </Link>
               <Link
                 href="/users"
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-white/70 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
               >
                 Users
               </Link>
               <Link
                 href="/kyc"
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-white/70 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
               >
                 KYC
               </Link>
               <Link
                 href="/auth"
-                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-white/70 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
               >
                 Auth Testing
               </Link>
@@ -57,10 +57,10 @@ export default function Home() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="text-center">
-            <h2 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
+            <h2 className="text-4xl font-extrabold text-white sm:text-5xl">
               Welcome to PALS Admin Panel
             </h2>
-            <p className="mt-4 text-xl text-gray-600">
+            <p className="mt-4 text-xl text-white/60">
               Manage users, KYC submissions, and test authentication APIs
             </p>
           </div>
@@ -68,13 +68,13 @@ export default function Home() {
           <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <Link
               href="/dashboard"
-              className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow"
+              className="bg-surface border border-white/10 overflow-hidden shadow rounded-lg hover:border-white/20 transition-colors"
             >
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <svg
-                      className="h-6 w-6 text-gray-400"
+                      className="h-6 w-6 text-gold"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -89,11 +89,11 @@ export default function Home() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-white/50 truncate">
                         Dashboard
                       </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Overview & Stats
+                      <dd className="text-lg font-medium text-white">
+                        Overview &amp; Stats
                       </dd>
                     </dl>
                   </div>
@@ -103,13 +103,13 @@ export default function Home() {
 
             <Link
               href="/users"
-              className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow"
+              className="bg-surface border border-white/10 overflow-hidden shadow rounded-lg hover:border-white/20 transition-colors"
             >
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <svg
-                      className="h-6 w-6 text-gray-400"
+                      className="h-6 w-6 text-gold"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -124,10 +124,10 @@ export default function Home() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-white/50 truncate">
                         Users
                       </dt>
-                      <dd className="text-lg font-medium text-gray-900">
+                      <dd className="text-lg font-medium text-white">
                         Manage Users
                       </dd>
                     </dl>
@@ -138,13 +138,13 @@ export default function Home() {
 
             <Link
               href="/kyc"
-              className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow"
+              className="bg-surface border border-white/10 overflow-hidden shadow rounded-lg hover:border-white/20 transition-colors"
             >
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <svg
-                      className="h-6 w-6 text-gray-400"
+                      className="h-6 w-6 text-gold"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -159,10 +159,10 @@ export default function Home() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-white/50 truncate">
                         KYC
                       </dt>
-                      <dd className="text-lg font-medium text-gray-900">
+                      <dd className="text-lg font-medium text-white">
                         KYC Management
                       </dd>
                     </dl>
@@ -173,13 +173,13 @@ export default function Home() {
 
             <Link
               href="/auth"
-              className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow"
+              className="bg-surface border border-white/10 overflow-hidden shadow rounded-lg hover:border-white/20 transition-colors"
             >
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <svg
-                      className="h-6 w-6 text-gray-400"
+                      className="h-6 w-6 text-gold"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -194,10 +194,10 @@ export default function Home() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
+                      <dt className="text-sm font-medium text-white/50 truncate">
                         Auth
                       </dt>
-                      <dd className="text-lg font-medium text-gray-900">
+                      <dd className="text-lg font-medium text-white">
                         Test APIs
                       </dd>
                     </dl>
@@ -211,4 +211,3 @@ export default function Home() {
     </div>
   );
 }
-
