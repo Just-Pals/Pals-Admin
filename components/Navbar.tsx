@@ -1,14 +1,18 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { removeAuthTokens } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
+import { LogOut } from 'lucide-react';
+import { removeAuthTokens, getUser } from '@/lib/auth';
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super Admin',
+  admin: 'Admin',
+  user: 'User',
+};
 
 export default function Navbar() {
-  const pathname = usePathname();
   const router = useRouter();
-
-  const isActive = (path: string) => pathname === path;
+  const user = getUser();
 
   const handleLogout = () => {
     removeAuthTokens();
@@ -16,16 +20,28 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b h-16 fixed top-0 right-0 left-0 z-30">
-      <div className="h-full flex justify-end items-center px-4 sm:px-6 lg:px-8">
+    <nav className="bg-surface border-b border-white/10 h-16 sticky top-0 z-30">
+      <div className="h-full flex justify-between items-center px-4 sm:px-6 lg:px-8">
+        <div className="text-sm text-white/60">
+          {user && (
+            <>
+              <span className="text-white">{user.email || user.phone || 'Admin'}</span>
+              {user.role && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-gold/10 text-gold">
+                  {ROLE_LABELS[user.role] || user.role}
+                </span>
+              )}
+            </>
+          )}
+        </div>
         <button
           onClick={handleLogout}
-          className="px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium text-white/70 hover:text-danger hover:bg-danger/10 transition-colors"
         >
+          <LogOut className="w-4 h-4" />
           Logout
         </button>
       </div>
     </nav>
   );
 }
-

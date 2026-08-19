@@ -1,115 +1,145 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
+import { X } from 'lucide-react';
 import PageLayout from '@/components/PageLayout';
-import { userAPI, adminAPI } from '@/lib/api';
+import { adminAPI, mediaAPI } from '@/lib/api';
 
-interface User {
+type KycStatus = 'pending' | 'verified' | 'rejected';
+
+interface KycQueueItem {
   id: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  email?: string | null;
-  phone?: string;
-  kycStatus?: 'pending' | 'verified' | 'rejected';
-  profilePhoto?: string;
-  governmentIdType?: string;
-  governmentIdFront?: string;
-  governmentIdBack?: string;
-  address?: string | null;
-  dateOfBirth?: string | null;
-  createdAt: string;
+  userId: string;
+  userName: string | null;
+  email: string | null;
+  phone: string | null;
+  status: KycStatus;
+  documentType: string | null;
+  documentLast4: string | null;
+  documentExpiry: string | null;
+  documentFrontMediaId: string | null;
+  documentBackMediaId: string | null;
+  selfieMediaId: string | null;
+  rejectionReason: string | null;
+  submittedAt: string | null;
+  verifiedAt: string | null;
+}
+
+interface MediaPreview {
+  frontUrl: string | null;
+  backUrl: string | null;
+  selfieUrl: string | null;
+}
+
+const TABS: { label: string; status?: KycStatus }[] = [
+  { label: 'Pending', status: 'pending' },
+  { label: 'All' },
+  { label: 'Verified', status: 'verified' },
+  { label: 'Rejected', status: 'rejected' },
+];
+
+const PER_PAGE = 20;
+
+const STATUS_COLORS: Record<KycStatus, string> = {
+  pending: 'bg-gold/15 text-gold',
+  verified: 'bg-success/15 text-success',
+  rejected: 'bg-danger/15 text-danger',
+};
+
+function formatDate(dateString?: string | null) {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+async function resolveMediaUrl(mediaId: string | null): Promise<string | null> {
+  if (!mediaId) return null;
+  try {
+    const response = await mediaAPI.getMediaById(mediaId);
+    return response.data?.data?.signedUrl || null;
+  } catch (err) {
+    console.error(`Failed to resolve media ${mediaId}:`, err);
+    return null;
+  }
 }
 
 export default function KYCPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [items, setItems] = useState<KycQueueItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>(TABS[0]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const [selectedItem, setSelectedItem] = useState<KycQueueItem | null>(null);
+  const [media, setMedia] = useState<MediaPreview | null>(null);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchQueue = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await userAPI.getAllUsers();
-      const allUsers = response.data?.data?.users || [];
-      // Filter users who have submitted KYC (have firstName or lastName)
-      const kycUsers = allUsers.filter(
-        (u: User) => u.firstName || u.lastName || u.kycStatus !== 'pending'
-      );
-      setUsers(kycUsers);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch KYC data');
-      console.error('Error fetching KYC data:', err);
+      const response = await adminAPI.getKycQueue({ status: activeTab.status, page, perPage: PER_PAGE });
+      setItems(response.data?.data?.items || []);
+      setTotal(response.data?.data?.total || 0);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+      setError(axiosErr.response?.data?.error?.message || axiosErr.message || 'Failed to fetch KYC queue');
+      console.error('Error fetching KYC queue:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, page]);
 
-  const filteredUsers = users.filter((user) => {
-    if (filter === 'all') return true;
-    return (user.kycStatus || 'pending') === filter;
-  });
+  useEffect(() => {
+    fetchQueue();
+  }, [fetchQueue]);
 
-  const getStatusBadge = (status?: string) => {
-    const colors: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      verified: 'bg-green-100 text-green-800',
-      completed: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800',
-    };
-    const displayStatus = status || 'pending';
-    return (
-      <span
-        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-          colors[displayStatus] || 'bg-gray-100 text-gray-800'
-        }`}
-      >
-        {displayStatus}
-      </span>
-    );
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const statusCounts = {
-    all: users.length,
-    pending: users.filter((u) => (u.kycStatus || 'pending') === 'pending').length,
-    verified: users.filter((u) => u.kycStatus === 'verified').length,
-    rejected: users.filter((u) => u.kycStatus === 'rejected').length,
-  };
-
-  const handleUpdateKYCStatus = async (userId: string, status: 'verified' | 'rejected') => {
-    if (!confirm(`Are you sure you want to ${status === 'verified' ? 'approve' : 'reject'} this KYC?`)) {
-      return;
+  const openDetail = async (item: KycQueueItem) => {
+    setSelectedItem(item);
+    setMedia(null);
+    setActionError(null);
+    setMediaLoading(true);
+    try {
+      const [frontUrl, backUrl, selfieUrl] = await Promise.all([
+        resolveMediaUrl(item.documentFrontMediaId),
+        resolveMediaUrl(item.documentBackMediaId),
+        resolveMediaUrl(item.selfieMediaId),
+      ]);
+      setMedia({ frontUrl, backUrl, selfieUrl });
+    } finally {
+      setMediaLoading(false);
     }
+  };
+
+  const closeDetail = () => {
+    setSelectedItem(null);
+    setMedia(null);
+    setActionError(null);
+  };
+
+  const handleUpdateStatus = async (status: 'verified' | 'rejected') => {
+    if (!selectedItem) return;
+    if (!confirm(`Are you sure you want to ${status === 'verified' ? 'approve' : 'reject'} this KYC?`)) return;
 
     try {
-      setUpdatingStatus(userId);
-      await adminAPI.updateKYCStatus({ userId, status });
-      // Refresh the users list
-      await fetchUsers();
-      // Update selected user if it's the one being updated
-      if (selectedUser && selectedUser.id === userId) {
-        setSelectedUser({ ...selectedUser, kycStatus: status });
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update KYC status');
+      setUpdatingStatus(true);
+      setActionError(null);
+      await adminAPI.updateKYCStatus({ userId: selectedItem.userId, status });
+      closeDetail();
+      await fetchQueue();
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
+      setActionError(axiosErr.response?.data?.error?.message || axiosErr.message || 'Failed to update KYC status');
       console.error('Error updating KYC status:', err);
     } finally {
-      setUpdatingStatus(null);
+      setUpdatingStatus(false);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
   return (
     <PageLayout>
@@ -117,14 +147,12 @@ export default function KYCPage() {
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6 flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">KYC Management</h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Review and manage KYC submissions
-              </p>
+              <h1 className="text-3xl font-bold text-white">KYC Management</h1>
+              <p className="mt-2 text-sm text-white/60">Review and manage KYC submissions</p>
             </div>
             <button
-              onClick={fetchUsers}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm"
+              onClick={fetchQueue}
+              className="bg-gold hover:bg-gold-dark text-black font-medium py-2 px-4 rounded-md text-sm"
             >
               Refresh
             </button>
@@ -132,19 +160,22 @@ export default function KYCPage() {
 
           {/* Filter Tabs */}
           <div className="mb-6">
-            <div className="border-b border-gray-200">
+            <div className="border-b border-white/10">
               <nav className="-mb-px flex space-x-8">
-                {(['all', 'pending', 'verified', 'rejected'] as const).map((status) => (
+                {TABS.map((tab) => (
                   <button
-                    key={status}
-                    onClick={() => setFilter(status)}
+                    key={tab.label}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setPage(1);
+                    }}
                     className={`${
-                      filter === status
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize`}
+                      activeTab.label === tab.label
+                        ? 'border-gold text-gold'
+                        : 'border-transparent text-white/50 hover:text-white/70 hover:border-white/20'
+                    } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                   >
-                    {status} ({statusCounts[status]})
+                    {tab.label}
                   </button>
                 ))}
               </nav>
@@ -153,215 +184,201 @@ export default function KYCPage() {
 
           {loading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-              <p className="mt-4 text-gray-600">Loading KYC data...</p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
+              <p className="mt-4 text-white/60">Loading KYC data...</p>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <p className="text-red-800">{error}</p>
+            <div className="bg-danger/10 border border-danger/30 rounded-md p-4">
+              <p className="text-danger">{error}</p>
             </div>
           ) : (
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <ul className="divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
-                  <li key={user.id} className="px-6 py-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        {user.profilePhoto ? (
-                          <Image
-                            src={user.profilePhoto}
-                            alt="Profile"
-                            width={48}
-                            height={48}
-                            unoptimized
-                            className="h-12 w-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                            {(user.firstName || user.email || 'U').charAt(0).toUpperCase()}
+            <>
+              <div className="bg-surface border border-white/10 shadow overflow-hidden sm:rounded-md">
+                <ul className="divide-y divide-white/10">
+                  {items.map((item) => (
+                    <li key={item.id} className="px-6 py-4 hover:bg-white/5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="h-12 w-12 rounded-full bg-gold/20 text-gold flex items-center justify-center font-semibold">
+                            {(item.userName || item.email || 'U').charAt(0).toUpperCase()}
                           </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {user.firstName && user.lastName
-                              ? `${user.firstName} ${user.lastName}`
-                              : user.email || user.phone || 'Unnamed'}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {user.email || user.phone || 'No contact'}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            ID Type: {user.governmentIdType || 'N/A'} • Submitted:{' '}
-                            {formatDate(user.createdAt)}
-                          </p>
+                          <div>
+                            <p className="text-sm font-medium text-white">{item.userName || 'Unnamed'}</p>
+                            <p className="text-sm text-white/50">{item.email || item.phone || 'No contact'}</p>
+                            <p className="text-xs text-white/40 mt-1">
+                              {item.documentType || 'N/A'} • Submitted: {formatDate(item.submittedAt)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <span
+                            className={`px-2 py-1 text-xs font-semibold rounded-full ${STATUS_COLORS[item.status]}`}
+                          >
+                            {item.status}
+                          </span>
+                          <button
+                            onClick={() => openDetail(item)}
+                            className="text-gold hover:text-gold-dark text-sm font-medium"
+                          >
+                            View Details
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4">
-                        {getStatusBadge(user.kycStatus)}
-                        {(user.kycStatus === 'pending' || !user.kycStatus) && (
-                          <>
-                            <button
-                              onClick={() => handleUpdateKYCStatus(user.id, 'verified')}
-                              disabled={updatingStatus === user.id}
-                              className="bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 px-3 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {updatingStatus === user.id ? 'Updating...' : 'Approve'}
-                            </button>
-                            <button
-                              onClick={() => handleUpdateKYCStatus(user.id, 'rejected')}
-                              disabled={updatingStatus === user.id}
-                              className="bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-3 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {updatingStatus === user.id ? 'Updating...' : 'Reject'}
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowDetailsModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              {filteredUsers.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No KYC submissions found</p>
+                    </li>
+                  ))}
+                </ul>
+                {items.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-white/50">No KYC submissions found</p>
+                  </div>
+                )}
+              </div>
+
+              {total > PER_PAGE && (
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-sm text-white/60">
+                    Page {page} of {totalPages} • {total} total submissions
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1}
+                      className="px-3 py-1.5 text-sm rounded-md border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page >= totalPages}
+                      className="px-3 py-1.5 text-sm rounded-md border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </div>
 
-      {showDetailsModal && selectedUser && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+      {selectedItem && (
+        <div className="fixed inset-0 bg-black/70 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border border-white/10 w-full max-w-2xl shadow-lg rounded-md bg-surface">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">KYC Details</h3>
-                <button
-                  onClick={() => setShowDetailsModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
+                <h3 className="text-lg font-medium text-white">KYC Details</h3>
+                <button onClick={closeDetail} className="text-white/40 hover:text-white/70">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Name</label>
-                  <p className="text-sm text-gray-900">
-                    {selectedUser.firstName && selectedUser.lastName
-                      ? `${selectedUser.firstName} ${selectedUser.lastName}`
-                      : 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <p className="text-sm text-gray-900">{selectedUser.email || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Phone</label>
-                  <p className="text-sm text-gray-900">{selectedUser.phone || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-                  <p className="text-sm text-gray-900">{formatDate(selectedUser.dateOfBirth ?? undefined)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">ID Type</label>
-                  <p className="text-sm text-gray-900">
-                    {selectedUser.governmentIdType || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Status</label>
-                  <p className="text-sm text-gray-900">{selectedUser.kycStatus || 'pending'}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-sm font-medium text-gray-700">Address</label>
-                  <p className="text-sm text-gray-900">{selectedUser.address || 'N/A'}</p>
-                </div>
-                {selectedUser.profilePhoto && (
-                  <div className="col-span-2">
-                    <label className="text-sm font-medium text-gray-700">Profile Photo</label>
-                    <div className="mt-2">
-                      <Image
-                        src={selectedUser.profilePhoto}
-                        alt="Profile"
-                        width={128}
-                        height={128}
-                        unoptimized
-                        className="h-32 w-32 rounded-lg object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
-                {selectedUser.governmentIdFront && (
+
+              <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">ID Front</label>
-                    <div className="mt-2">
-                      <Image
-                        src={selectedUser.governmentIdFront}
-                        alt="ID Front"
-                        width={400}
-                        height={128}
-                        unoptimized
-                        className="h-32 w-full rounded-lg object-cover border"
-                      />
-                    </div>
+                    <label className="text-sm font-medium text-white/70">Name</label>
+                    <p className="text-sm text-white">{selectedItem.userName || 'N/A'}</p>
                   </div>
-                )}
-                {selectedUser.governmentIdBack && (
                   <div>
-                    <label className="text-sm font-medium text-gray-700">ID Back</label>
-                    <div className="mt-2">
-                      <Image
-                        src={selectedUser.governmentIdBack}
-                        alt="ID Back"
-                        width={400}
-                        height={128}
-                        unoptimized
-                        className="h-32 w-full rounded-lg object-cover border"
-                      />
+                    <label className="text-sm font-medium text-white/70">Status</label>
+                    <p className="text-sm text-white">
+                      <span
+                        className={`px-2 py-0.5 text-xs font-semibold rounded-full ${STATUS_COLORS[selectedItem.status]}`}
+                      >
+                        {selectedItem.status}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-white/70">Email</label>
+                    <p className="text-sm text-white">{selectedItem.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-white/70">Phone</label>
+                    <p className="text-sm text-white">{selectedItem.phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-white/70">ID Type</label>
+                    <p className="text-sm text-white">
+                      {selectedItem.documentType || 'N/A'} {selectedItem.documentLast4 ? `••${selectedItem.documentLast4}` : ''}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-white/70">Submitted</label>
+                    <p className="text-sm text-white">{formatDate(selectedItem.submittedAt)}</p>
+                  </div>
+                  {selectedItem.rejectionReason && (
+                    <div className="col-span-2">
+                      <label className="text-sm font-medium text-white/70">Rejection reason</label>
+                      <p className="text-sm text-danger">{selectedItem.rejectionReason}</p>
                     </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-white/70 mb-2 block">Documents</label>
+                  {mediaLoading ? (
+                    <div className="text-center py-6">
+                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gold"></div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { label: 'Selfie', url: media?.selfieUrl },
+                        { label: 'ID Front', url: media?.frontUrl },
+                        { label: 'ID Back', url: media?.backUrl },
+                      ].map((doc) => (
+                        <div key={doc.label}>
+                          <p className="text-xs text-white/50 mb-1">{doc.label}</p>
+                          {doc.url ? (
+                            <Image
+                              src={doc.url}
+                              alt={doc.label}
+                              width={200}
+                              height={140}
+                              unoptimized
+                              className="h-28 w-full rounded-lg object-cover border border-white/10"
+                            />
+                          ) : (
+                            <div className="h-28 w-full rounded-lg border border-dashed border-white/20 flex items-center justify-center text-xs text-white/40">
+                              Not available
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {actionError && (
+                  <div className="bg-danger/10 border border-danger/30 rounded-md p-3">
+                    <p className="text-danger text-sm">{actionError}</p>
                   </div>
                 )}
               </div>
+
               <div className="mt-6 flex justify-between">
-                {(selectedUser.kycStatus === 'pending' || !selectedUser.kycStatus) && (
+                {selectedItem.status === 'pending' && (
                   <div className="flex space-x-3">
                     <button
-                      onClick={() => {
-                        handleUpdateKYCStatus(selectedUser.id, 'verified');
-                        setShowDetailsModal(false);
-                      }}
-                      disabled={updatingStatus === selectedUser.id}
-                      className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleUpdateStatus('verified')}
+                      disabled={updatingStatus}
+                      className="bg-success hover:bg-success/80 text-white font-medium py-2 px-4 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {updatingStatus === selectedUser.id ? 'Updating...' : 'Approve KYC'}
+                      {updatingStatus ? 'Updating...' : 'Approve KYC'}
                     </button>
                     <button
-                      onClick={() => {
-                        handleUpdateKYCStatus(selectedUser.id, 'rejected');
-                        setShowDetailsModal(false);
-                      }}
-                      disabled={updatingStatus === selectedUser.id}
-                      className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => handleUpdateStatus('rejected')}
+                      disabled={updatingStatus}
+                      className="bg-danger/90 hover:bg-danger text-white font-medium py-2 px-4 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {updatingStatus === selectedUser.id ? 'Updating...' : 'Reject KYC'}
+                      {updatingStatus ? 'Updating...' : 'Reject KYC'}
                     </button>
                   </div>
                 )}
                 <button
-                  onClick={() => setShowDetailsModal(false)}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-md text-sm ml-auto"
+                  onClick={closeDetail}
+                  className="bg-white/10 hover:bg-white/20 text-white font-medium py-2 px-4 rounded-md text-sm ml-auto"
                 >
                   Close
                 </button>
@@ -373,5 +390,3 @@ export default function KYCPage() {
     </PageLayout>
   );
 }
-
-
